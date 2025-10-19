@@ -1,0 +1,81 @@
+#include <DHT.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+#define DHTPIN 3
+#define DHTTYPE DHT11
+#define PRESSURE_PIN 5
+#define RAIN_PIN 6
+
+DHT dht(DHTPIN, DHTTYPE);
+
+// Thresholds (set after calibration)
+int rain_threshold = 400;  // ADC value when rain detected
+int pressure_normal = 1010; // hPa, adjust after measuring
+const char* WIFI_SSID = "Ilakkiya's Galaxy";
+const char* WIFI_PASS = "ilakkiya";
+
+void connectWiFi() {
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  Serial.print("Connecting WiFi");
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+    delay(500); Serial.print(".");
+  }
+  Serial.println(WiFi.status() == WL_CONNECTED ? " connected" : " failed");
+}
+const char* THINGSPEAK_KEY = "Y5MG0ELVLE7N185B";
+const char* TELE_TOKEN = "8225600505:AAHgPo2JsPqCd5Bq3PPR";
+
+const char* TELE_CHAT = "YOUR_CHAT_ID"; // string
+void sendToThingSpeak(float t, float h, int rain, int pres) {
+  if (WiFi.status() != WL_CONNECTED) return;
+  HTTPClient http;
+  String url = String("http://api.thingspeak.com/update?api_key=") + THINGSPEAK_KEY +
+               "&field1=" + String(t) +
+               "&field2=" + String(h) +
+               "&field3=" + String(rain) +
+               "&field4=" + String(pres);
+  http.begin(url);
+  int code = http.GET();
+  Serial.println("ThingSpeak code: " + String(code));
+  http.end();
+}
+
+void sendTelegram(String msg) {
+  if (WiFi.status() != WL_CONNECTED) return;
+  HTTPClient http;
+  String url = "https://api.telegram.org/bot" + String(TELE_TOKEN) +
+               "/sendMessage?chat_id=" + String(TELE_CHAT) + "&text=" + msg;
+  http.begin(url);
+  int code = http.GET();
+  Serial.println("Telegram code: " + String(code));
+  http.end();
+}
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+  pinMode(RAIN_PIN, INPUT);
+  pinMode(PRESSURE_PIN, INPUT);
+  connectWiFi();
+}
+
+void loop() {
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  int rain = analogRead(RAIN_PIN);
+  int pres = analogRead(PRESSURE_PIN); // convert if needed to hPa
+
+  Serial.printf("Temp: %.2f C, Hum: %.2f %% , Rain: %d, Pressure: %d\n", t, h, rain, pres);
+
+  // Send to cloud
+  sendToThingSpeak(t, h, rain, pres);
+
+  // Alerts
+  if (rain > rain_threshold) sendTelegram("ALERT: Rain detected! Value=" + String(rain));
+
+  delay(15000); // 15s delay
+}
+
+
