@@ -25,9 +25,9 @@ void connectWiFi() {
   Serial.println(WiFi.status() == WL_CONNECTED ? " connected" : " failed");
 }
 const char* THINGSPEAK_KEY = "Y5MG0ELVLE7N185B";
-const char* TELE_TOKEN = "8225600505:AAHgPo2JsPqCd5Bq3PPR";
+const char* TELE_TOKEN = "8143753763:AAGakvFLjDomWmp5OJiSlmxpREzA_k3Ze_U";
 
-const char* TELE_CHAT = "YOUR_CHAT_ID"; // string
+const char* TELE_CHAT = "1498697137"; // string
 void sendToThingSpeak(float t, float h, int rain, int pres) {
   if (WiFi.status() != WL_CONNECTED) return;
   HTTPClient http;
